@@ -56,7 +56,7 @@ router.post('/', Authenticate, (req, res) => {
                 candidateLocalGovt
             });
     
-            // newParty.save().then(newPartyData => res.json({success: 'Party Successfully Created', data: newPartyData}))
+            newParty.save().then(newPartyData => res.json({success: 'Party Successfully Created', data: newPartyData}))
         }
     });
     

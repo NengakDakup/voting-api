@@ -160,4 +160,18 @@ router.get('/:status', Authenticate, (req, res) => {
     })
 })
 
+//Edit the Status of an Election
+router.post('/:electionId/update-status', Authenticate, (req, res) => {
+    const {electionId} = req.params;
+
+    const {status} =  req.body;
+
+    Election.findOne({ID: electionId}).then(election => {
+        if(!election) return res.status(404).json({error: 'Election Not found'});
+
+        election.status = status;
+        election.save().then(electionData => res.json({success: true, data: electionData}))
+    })
+})
+
 module.exports = router;

@@ -11,7 +11,7 @@ const VoterSchema = new Schema({
         type: String,
         required: true,
     },
-    image: {
+    imageUrl: {
         type: String
     },
     age: {
@@ -27,10 +27,10 @@ const VoterSchema = new Schema({
         type: String
     },
     secretPhrase: {
-        type: String
+        type: Array
     },
     voiceSample: {
-        type: String
+        type: Array
     },
     date: {
       type: Date,
