@@ -1,12 +1,18 @@
 const express = require('express');
 const formidable = require('formidable');
 const router = express.Router();
+const fs = require('fs');
 
 // Load the voters database model
 const Voter = require('../../models/Voter');
 
 // load Authentication Middleware
 const {Authenticate} = require('../../controllers/Authenticator');
+
+// load Training and prediction functions
+const {runPrediction, trainData} = require('../../scripts/run');
+
+// runPrediction();
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -18,8 +24,6 @@ router.get('/', Authenticate, (req, res) => {
 
 
 // create a voter 
-
-// Todo - Make Sure to retrain the data when a new voter is added
 router.post('/', Authenticate, (req, res) => {
     const form = formidable({ multiples: true, keepExtensions: true, uploadDir: __dirname + '/../../public/images/' });
     form.parse(req, (err, fields, files) => {
@@ -34,34 +38,35 @@ router.post('/', Authenticate, (req, res) => {
             randNum = Math.floor(Math.random() * availableWords.length); // Generate A random number btw the length of array
             var randWord = availableWords[randNum]; // get the random word
             secretPhrase.push(randWord); // add the radom word to the users secret phrase
-            availableWords.splice(randNum, 1); // remove the word from the available word to avoid repitition of words 
-
-            console.log(randNum);
-            console.log(availableWords);
-            
+            availableWords.splice(randNum, 1); // remove the word from the available word to avoid repitition of words             
         }
 
-        const {fullname, age, localGovt, stateOfOrigin, occupation} = fields;
+        const {ID, fullname, age, localGovt, stateOfOrigin, occupation} = fields;
         const {image} = files;
         const imageUrl = process.env.server + 'images/upload_' + image.path.split('upload_')[1];
 
-        if(!fullname || !imageUrl || !age || !localGovt || !stateOfOrigin || !occupation || secretPhrase){
-            res.status(400).json({error: 'Please fill All Fields'});
+
+        if(!ID || !fullname || !imageUrl || !age || !localGovt || !stateOfOrigin || !occupation || !secretPhrase){
+            res.status(400).json({error: 'Please fill All Fieldzzz'});
         } else {
-            const newVoter = new Voter({
-                fullname,
-                imageUrl,
-                age, 
-                localGovt,
-                stateOfOrigin, 
-                occupation, 
-                secretPhrase,
-            });
+            // get the index to use for the current user
+            Voter.find().then(voters => {
+                let voterIndex = voters.length;
+                const newVoter = new Voter({
+                    ID,
+                    fullname,
+                    imageUrl,
+                    age, 
+                    localGovt,
+                    stateOfOrigin, 
+                    occupation, 
+                    secretPhrase,
+                    voterIndex
+                });
 
-            newVoter.save().then(newVoterData => res.json({success: true, data: newVoterData}))
+                newVoter.save().then(newVoterData => res.json({success: true, data: newVoterData}))
+            })    
         }
-
-
     });
     
 });
@@ -86,6 +91,8 @@ router.delete('/:voterId', Authenticate, (req, res) => {
 });
 
 // Save a Users Voice Sample
+// work on the format the audio files are saved
+// Todo - Make Sure to retrain the data when a new voter is added
 router.put('/:voterId/voice-sample', Authenticate, (req, res) => {
     const {voterId} = req.params;
 
@@ -98,18 +105,63 @@ router.put('/:voterId/voice-sample', Authenticate, (req, res) => {
                 return res.status(400).json({error: 'Please Try Again'});
             }
 
+            
+            console.log('dir', __dirname + '\\..\\..\\public\\samples');
+            // find the last users number so we can know what to use as this users number
+            let userIndex = voter.voterIndex;
+            if(userIndex < 10){
+                userIndex = '0' + userIndex;
+            }
+            let fileName = userIndex + '-' + voter.fullname.split(' ')[0];
+            
+            // use fs.rename() to change the file names to the appropriate standard
+            // fs.rename(oldpath, newpath, callback(err))
             const {sample1, sample2, sample3, sample4, sample5, sample6, sample7, sample8, sample9, sample10} = files;
+            if(!sample1 || !sample2 || !sample3 || !sample4 || !sample5 || !sample6 || !sample7 || !sample8 || !sample9 || !sample10) return res.status(404).json({error: 'Please upload all voice samples'})
             const voiceSample = [sample1.path, sample2.path, sample3.path, sample4.path, sample5.path, sample6.path, sample7.path, sample8.path, sample9.path, sample10.path];
+            let newVoiceSampePaths = [];
 
-            voter.voiceSample = voiceSample;
-            voter.save().then(voterData => res.json({success: true, data: voterData}))
+            voiceSample.filter((path, index) => {
+                newPath = __dirname + '\\..\\..\\public\\samples\\' + fileName + `-${index}.flac`;
+                newVoiceSampePaths.push(newPath);
+                fs.rename(path, newPath, (err) => {
+                    if(err) return res.status(400).json({error: true});
+                });
+
+                if(index === 9){
+                    voter.voiceSample = newVoiceSampePaths;
+                    //call the retrain data function here
+                    voter.save().then(voterData => res.json({success: true, data: voterData}))
+                }
+                
+            })
         })
     })
 });
 
 // Quick way to verify and log in voter /??
-router.post('/verify-id', Authenticate, (res, req) => {
+// A token is returned which should expire in 5mins or so
+router.post('/:voterId/verify-voter', Authenticate, (req, res) => {
+    const {voterId} = req.params;
 
+    Voter.findOne({ID: voterId}).then(voter => {
+        if(!voter) return res.status(404).json({error: 'Voter not found'});
+
+        const form = formidable({ multiples: true, keepExtensions: true });
+        form.parse(req, (err, fields, files) => {
+            if(err){
+                return res.status(400).json({error: 'Please Try Again'});
+            }
+
+            if(!files.voiceSample) res.status(400).json({error: 'Please fill All Fields'});
+            const voiceSample = files.voiceSample.path;
+
+            // call the python script with voiceSample as the argument
+
+            console.log(voiceSample);
+        })
+    })
+    
 });
 
 module.exports = router;

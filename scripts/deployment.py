@@ -14,6 +14,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn import svm
 from sklearn import metrics
 import pickle
+from joblib import dump, load
 
 
 def extract_features(file_name):
@@ -40,17 +41,22 @@ def predict(filename):
     
     feature = np.array(feature)
     feature = np.reshape(feature, (1,-1)) 
-    print(feature)
+
+    # ss = pickle.load(open('scaler.pickle','rb'))
+    # # print(feature)
+    # feature = ss.fit_transform(feature)
+    # print(feature)
     # ss = StandardScaler()
     # feature = ss.fit_transform(feature)
     # print(feature)
     # feature.reshape(1,-1)
 
     # print(feature.shape)
-
-    model_file= open('trainedSvmModel.pickle', 'rb')
-
-    model = pickle.load(model_file)
+    
+    # model_file= open('trainedSvmModel.pickle', 'rb')
+    
+    # model = pickle.load(model_file)
+    model = load('svmmodel.joblib')
 
     prediction = model.predict(feature)
     print('predicted that its speaker ->', prediction)
@@ -58,4 +64,4 @@ def predict(filename):
 
 # for file in Path().rglob('*.flac'):#search files in that have extension .flac files 
 #split filename with '-' and select element with index 0
-predict('test_audio.flac')
+predict('C:\Users\RAZER\Desktop\projects\chimdi\voting-api\routes\api\..\..\public\samples\00-wisdom-0.flac')

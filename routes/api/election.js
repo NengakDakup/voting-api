@@ -12,7 +12,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 
-// Returns a list of all elections
+// Returns a list of all electionsv
 router.get('/', Authenticate, (req, res) => {
     Election.find().then(elections => res.json({success: true, data: elections}))
 });

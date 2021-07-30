@@ -23,7 +23,6 @@ router.get('/', Authenticate, (req, res) => {
 // Creates a Party
 
 //finifh up image upload for here
-// will candidates image be uploaded too?
 router.post('/', Authenticate, (req, res) => {
     // image upload with formidable
     const form = formidable({ multiples: true, keepExtensions: true, uploadDir: __dirname + '/../../public/images/' });

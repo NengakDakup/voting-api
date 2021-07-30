@@ -32,6 +32,9 @@ const VoterSchema = new Schema({
     voiceSample: {
         type: Array
     },
+    voterIndex: {
+        type: Number
+    },
     date: {
       type: Date,
       default: Date.now
