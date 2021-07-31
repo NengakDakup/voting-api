@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 
 // load Database Models
 const Election = require('../../models/Election');
 const Voter = require('../../models/Voter');
+const Party = require('../../models/Party');
 
 // load Authentication Middleware
 const {Authenticate} = require('../../controllers/Authenticator');
@@ -29,7 +31,7 @@ router.post('/', Authenticate, (req, res) => {
             ID,
             name, 
             type, 
-            status: 'Ongoing', 
+            status: 'ongoing', 
             date: Date.now()
         });
 
@@ -67,7 +69,7 @@ router.delete('/:electionId', Authenticate, (req, res) => {
 router.post('/:electionId/vote', Authenticate, (req, res) => {
     const {electionId} = req.params;
 
-    const {voterId, partyId} = req.body;
+    const {voterId, partyId, token} = req.body;
 
     Election.findOne({ID: electionId}).then(election => {
         if(!election) return res.status(404).json({error: 'Election Not Found'});
@@ -76,21 +78,34 @@ router.post('/:electionId/vote', Authenticate, (req, res) => {
         Voter.findOne({ID: voterId}).then(voter => {
             if(!voter) return res.status(404).json({error: 'Voter Not Found'});
 
-            let alreadyVoted = false;
-            // Check if Voter has already voted
-            election.ballots.filter(data => {
-                if(data.voterId === voterId){
-                    alreadyVoted = true;
-                }
-            })
+            // check if token is valid here
+            try {
+                const decoded = jwt.verify(token.toString(), JWTKey);
 
-            if(alreadyVoted === true){
-                res.status(400).json({error: 'Already Voted'});
-            } else {
-                const vote = {voterId, partyId};
-                election.ballots.push(vote);
-                election.save().then(electionData => res.json({success: 'Vote Casted', data: electionData}))
+                if(decoded.electionId === electionId && decoded.voterId === voterId){
+                    let alreadyVoted = false;
+                    // Check if Voter has already voted
+                    election.ballots.filter(data => {
+                        if(data.voterId === voterId){
+                            alreadyVoted = true;
+                        }
+                    })
+
+                    if(alreadyVoted === true){
+                        res.status(400).json({error: 'Already Voted'});
+                    } else {
+                        const vote = {voterId, partyId};
+                        election.ballots.push(vote);
+                        election.save().then(electionData => res.json({success: 'Vote Casted', data: electionData}))
+                    }
+                } else {
+                    return res.status(400).json({error: 'Error With Voter Information, Please Restart Voting Process'})
+                }
+            } catch(error){
+                return res.status(400).json({error: 'Please Authenticate Voters Voice First'});
             }
+
+            
         })
 
         
@@ -120,7 +135,7 @@ router.put('/:electionId/register-voter', Authenticate, (req, res) => {
             if(alreadyRegistered === true){
                 return res.status(400).json({error: 'Already Registered'});
             } else {
-                election.registeredVoters.push(voterId);
+                election.registeredVoters.push({voterId, failedAttempts: 0});
                 election.save().then(data => {
                     return res.json({success: 'Voter Registered'})
                 })
@@ -143,8 +158,23 @@ router.put('/:electionId/register-party', Authenticate, (req, res) => {
         Party.findOne({ID: partyId}).then(party => {
             if(!party) return res.status(404).json({error: 'Party Not Found'});
 
-            election.registeredParties.push(partyId);
-            election.save().then(electionData => res.json({success: true, data: electionData}))
+            //check if party has already registered
+            let alreadyRegistered = false;
+            
+            election.registeredParties.filter(data => {
+                if(data.partyId === partyId){
+                    alreadyRegistered = true;
+                }
+            });
+
+            if(alreadyRegistered){
+                return res.status(400).json({error: 'Already Registered'});
+            } else {
+                election.registeredParties.push({partyId});
+                election.save().then(electionData => res.json({success: true, data: electionData}))
+            }
+
+            
         })
     })
 
@@ -152,10 +182,10 @@ router.put('/:electionId/register-party', Authenticate, (req, res) => {
 
 // Get Elections by their status value
 // archived || ongoing || upcoming
-router.get('/:status', Authenticate, (req, res) => {
+router.get('/status/:status', Authenticate, (req, res) => {
     const {status} = req.params;
 
-    Election.find({status: satus}).then(elections => {
+    Election.find({status: status}).then(elections => {
         return res.json({success: true, data: elections})
     })
 })

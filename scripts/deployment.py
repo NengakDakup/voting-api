@@ -1,5 +1,6 @@
 import glob
 import os
+import sys
 from pathlib import Path
 from librosa import feature
 import pandas as pd
@@ -56,7 +57,8 @@ def predict(filename):
     # model_file= open('trainedSvmModel.pickle', 'rb')
     
     # model = pickle.load(model_file)
-    model = load('svmmodel.joblib')
+    print(Path.cwd())
+    model = load(Path.cwd() + '/scripts/svmmodel.joblib')
 
     prediction = model.predict(feature)
     print('predicted that its speaker ->', prediction)
@@ -64,4 +66,4 @@ def predict(filename):
 
 # for file in Path().rglob('*.flac'):#search files in that have extension .flac files 
 #split filename with '-' and select element with index 0
-predict('C:\\Users\\RAZER\\Desktop\\projects\\chimdi\\voting-api\\routes\\api\\..\\..\\public\\samples\\39-nengak9.flac')
+predict(sys.argv[1])

@@ -30,7 +30,10 @@ const ElectionSchema = new Schema({
         {
             voterId: {
                 type: String
-            } 
+            },
+            failedAttempts: {
+                type: Number
+            }
         }
     ],
     ballots: [

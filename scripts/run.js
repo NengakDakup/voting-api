@@ -1,6 +1,5 @@
 const { spawn } = require('child_process');
 const os = require('os');
-const path = require('path')
 
 function trainData() {
   let pythonExecutable = '';
@@ -27,7 +26,7 @@ function trainData() {
   });
 }
 
-async function runPrediction(){
+async function runPrediction(voiceSample){
   let pythonExecutable = '';
 
   // check if it's running on windows or linux
@@ -37,18 +36,20 @@ async function runPrediction(){
     pythonExecutable = __dirname + './env/Scripts/python';
   }
 
-  const bat = spawn(pythonExecutable, ['./deployment.py', './training/0-ahmed.flac']);
+  console.log('path: ', voiceSample);
 
-    bat.stdout.on('data', (data) => {
-      const res = data.toString();
-      const items = res.split('\n');
-  
-      return(items[items.length-2]);
-  
-    });
+  const bat = spawn(pythonExecutable, [__dirname+'./deployment.py', voiceSample]);
+
+  bat.stdout.on('data', (data) => {
+    const res = data.toString();
+    const items = res.split('\n');
+
+    console.log(items[items.length-2]);
+
+  });
 
   bat.stderr.on('data', (data) => {
-    return (data.toString());
+     console.log(data.toString());
   });
 
   bat.on('exit', (code) => {

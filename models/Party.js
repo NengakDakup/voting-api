@@ -12,16 +12,14 @@ const PartySchema = new Schema({
         required: true,
     },
     partyImageUrl: {
-        type: String,
-        required: true,
+        type: String
     },
     acronym: {
         type: String,
         required: true,
     },
     candidateImageUrl: {
-        type: String,
-        required: true
+        type: String
     },
     candidateName: {
         type: String,

@@ -21,8 +21,6 @@ router.get('/', Authenticate, (req, res) => {
 });
 
 // Creates a Party
-
-//finifh up image upload for here
 router.post('/', Authenticate, (req, res) => {
     // image upload with formidable
     const form = formidable({ multiples: true, keepExtensions: true, uploadDir: __dirname + '/../../public/images/' });
@@ -33,17 +31,13 @@ router.post('/', Authenticate, (req, res) => {
 
         const {ID, name, acronym, candidateName, candidatePosition, candidateLocalGovt} = fields;
         const {partyImage, candidateImage} = files;
-        
-        const partyImageUrl = process.env.server + 'images/upload_' + partyImage.path.split('upload_')[1];
-        const candidateImageUrl = process.env.server + 'images/upload_' + candidateImage.path.split('upload_')[1];
-
-        
-
-
 
         if(!name || !partyImage || !candidateImage || !acronym || !candidateName || !candidatePosition || !candidateLocalGovt){
             return res.json({error: 'Please fill all fields'});
         } else {
+            const partyImageUrl = process.env.server + 'images/upload_' + partyImage.path.split('upload_')[1];
+            const candidateImageUrl = process.env.server + 'images/upload_' + candidateImage.path.split('upload_')[1];
+            
             const newParty = new Party({
                 ID,
                 name,

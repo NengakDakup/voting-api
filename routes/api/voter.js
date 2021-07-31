@@ -2,6 +2,7 @@ const express = require('express');
 const formidable = require('formidable');
 const router = express.Router();
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
 
 // Load the voters database model
 const Voter = require('../../models/Voter');
@@ -12,9 +13,9 @@ const {Authenticate} = require('../../controllers/Authenticator');
 // load Training and prediction functions
 const {runPrediction, trainData} = require('../../scripts/run');
 
-// runPrediction();
 
 const dotenv = require('dotenv');
+const Election = require('../../models/Election');
 dotenv.config();
 
 // returns a list of all voters
@@ -131,6 +132,7 @@ router.put('/:voterId/voice-sample', Authenticate, (req, res) => {
                 if(index === 9){
                     voter.voiceSample = newVoiceSampePaths;
                     //call the retrain data function here
+                    trainData();
                     voter.save().then(voterData => res.json({success: true, data: voterData}))
                 }
                 
@@ -141,26 +143,64 @@ router.put('/:voterId/voice-sample', Authenticate, (req, res) => {
 
 // Quick way to verify and log in voter /??
 // A token is returned which should expire in 5mins or so
-router.post('/:voterId/verify-voter', Authenticate, (req, res) => {
-    const {voterId} = req.params;
+router.post('/:voterId/:electionId/verify-voter', Authenticate, (req, res) => {
+    const {voterId, electionId} = req.params;
 
-    Voter.findOne({ID: voterId}).then(voter => {
-        if(!voter) return res.status(404).json({error: 'Voter not found'});
+    Election.findOne({ID: electionId}).then(election => {
+        if(!election) return res.status(404).json({error: 'Election not Found'});
+        let voterRegistered = false;
+        let voterRegisteredIndex = null;
+        let voterFailedAttempts = 0;
+        election.registeredVoters.map((registeredData, i) => {
+            if(registeredData.voterId === voterId){
+                voterRegistered = true;
+                voterRegisteredIndex = i;
+                voterFailedAttempts = registeredData.failedAttempts;
+            } 
+        })
 
-        const form = formidable({ multiples: true, keepExtensions: true });
-        form.parse(req, (err, fields, files) => {
-            if(err){
-                return res.status(400).json({error: 'Please Try Again'});
-            }
+        if(!voterRegistered) return res.status(404).json({error: 'Voter Not Registered For Election'});
 
-            if(!files.voiceSample) res.status(400).json({error: 'Please fill All Fields'});
-            const voiceSample = files.voiceSample.path;
+        //
+        Voter.findOne({ID: voterId}).then(voter => {
+            if(!voter) return res.status(404).json({error: 'Voter not found'});
+    
+            const form = formidable({ multiples: true, keepExtensions: true });
+            form.parse(req, (err, fields, files) => {
+                if(err){
+                    return res.status(400).json({error: 'Please Try Again'});
+                }
+    
+                if(!files.voiceSample) res.status(400).json({error: 'Please fill All Fields'});
+                const voiceSample = files.voiceSample.path;
+    
+                // call the python script with voiceSample as the argument
+                (async function(){
+                    const result = await runPrediction(voiceSample);
+                    // return res.json(result);
+                    // check if voter id is equal to the voters id returned by the python script
+                    // if it is equal to create token and return
+                    if(result === voter.voterIndex){
+                        const {JWTKey} = process.env;
+                        const payload = { voterId, electionId, authenticated: true };
 
-            // call the python script with voiceSample as the argument
-
-            console.log(voiceSample);
+                        jwt.sign(payload, JWTKey, {expiresIn: 604800}, (err, token) => {
+                            return res.json({success: true, data: token})
+                        });
+                        
+                    } else {
+                        // add to the number of user failed attempts
+                        election.registeredVoters[voterRegisteredIndex].failedAttempts = voterFailedAttempts++;
+                        election.save().then(newData => res.json({error: 'Voter Authentication Failed, Please Try Again'}));
+                    }
+                    
+                    
+                })() 
+            })
         })
     })
+
+    
     
 });
 
