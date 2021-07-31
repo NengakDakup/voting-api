@@ -1,15 +1,15 @@
-const {PythonShell} = require('python-shell');
 const { spawn } = require('child_process');
 const os = require('os');
+const path = require('path')
 
 function trainData() {
   let pythonExecutable = '';
 
   // check if it's running on windows or linux
   if(os.platform() === 'win32'){
-    pythonExecutable = './env/Scripts/python.exe';
+    pythonExecutable = __dirname + './env/Scripts/python';
   } else if(os.platform() === 'linux') {
-    pythonExecutable = './env/Scripts/python';
+    pythonExecutable = __dirname + './env/Scripts/python';
   }
 
   const bat = spawn(pythonExecutable, ['extract.py']);
@@ -32,9 +32,9 @@ async function runPrediction(){
 
   // check if it's running on windows or linux
   if(os.platform() === 'win32'){
-    pythonExecutable = './env/Scripts/python.exe';
+    pythonExecutable = __dirname + './env/Scripts/python.exe';
   } else if(os.platform() === 'linux') {
-    pythonExecutable = './env/Scripts/python';
+    pythonExecutable = __dirname + './env/Scripts/python';
   }
 
   const bat = spawn(pythonExecutable, ['./deployment.py', './training/0-ahmed.flac']);
@@ -43,7 +43,7 @@ async function runPrediction(){
       const res = data.toString();
       const items = res.split('\n');
   
-      console.log(items[items.length-2]);
+      return(items[items.length-2]);
   
     });
 

@@ -64,4 +64,4 @@ def predict(filename):
 
 # for file in Path().rglob('*.flac'):#search files in that have extension .flac files 
 #split filename with '-' and select element with index 0
-predict('C:\Users\RAZER\Desktop\projects\chimdi\voting-api\routes\api\..\..\public\samples\00-wisdom-0.flac')
+predict('C:\\Users\\RAZER\\Desktop\\projects\\chimdi\\voting-api\\routes\\api\\..\\..\\public\\samples\\39-nengak9.flac')
